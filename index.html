@@ -94,6 +94,11 @@
     font-size: 18px;
     font-weight: bold;
   }
+
+  #buildExoticRow {
+    font-size: 15px;
+    margin-top: 4px;
+  }
 </style>
 </head>
 <body>
@@ -111,18 +116,27 @@
     <div class="result" id="subclassResult">-</div>
   </div>
 
+  <div class="box">
+    <div class="box-label">Exotic Armor</div>
+    <div class="result" id="exoticResult">-</div>
+  </div>
+
   <button id="spinButton">Spin</button>
 
   <div class="box" id="buildBox">
     <div class="box-label">Your Build</div>
-    <div class="result">
+    <div class="result" id="buildResultRow">
       <span id="buildClass">-</span>
       <span>-</span>
       <span id="buildSubclass">-</span>
     </div>
+    <div class="result" id="buildExoticRow">
+      <span id="buildExotic">-</span>
+    </div>
   </div>
 </div>
 
+<script src="exotics.js"></script>
 <script>
 // ---------------------------------------------------------
 // MODULAR OPTIONS - edit these lists to change what's on the wheel
@@ -146,6 +160,8 @@ const SUBCLASS_COLORS = {
 };
 
 const DEFAULT_COLOR = "#111111";
+const EXOTIC_COLOR = "#c9a227";     // gold, matching Destiny's exotic rarity color
+const EMPTY_LIST_COLOR = "#666666"; // used when a list has nothing added yet
 
 // Spin timing
 const SPIN_STEPS = 18;
@@ -246,28 +262,56 @@ function playDoneDing() {
 const spinButton = document.getElementById("spinButton");
 const classResultEl = document.getElementById("classResult");
 const subclassResultEl = document.getElementById("subclassResult");
+const exoticResultEl = document.getElementById("exoticResult");
 const buildClassEl = document.getElementById("buildClass");
 const buildSubclassEl = document.getElementById("buildSubclass");
+const buildExoticEl = document.getElementById("buildExotic");
 
-let spinning = { class: false, subclass: false };
+let spinning = { class: false, subclass: false, exotic: false };
 let tickTimer = null;
 
 function pickRandom(arr) {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
-function animateSpin(options, el, key, totalSteps, colorMap, onDone, step = 0) {
-  if (step === 0) spinning[key] = true;
+// Builds the exotic pool for a given class + subclass result.
+// Prismatic gets its own dedicated list (not combined with Neutral).
+// Everything else combines that subclass's list with the class's Neutral list.
+function getExoticPool(className, subclassName) {
+  const classData = EXOTICS[className];
+  if (!classData) return [];
+
+  if (subclassName === "Prismatic") {
+    return (classData.Prismatic || []).slice();
+  }
+
+  const subclassList = classData[subclassName] || [];
+  const neutralList = classData.Neutral || [];
+  return subclassList.concat(neutralList);
+}
+
+function animateSpin(options, el, key, totalSteps, colorResolver, onDone, step = 0) {
+  if (step === 0) {
+    if (options.length === 0) {
+      // Nothing in this list yet - show a placeholder instead of erroring
+      el.textContent = "No exotics added yet";
+      el.style.color = EMPTY_LIST_COLOR;
+      el.classList.remove("landed");
+      onDone(null);
+      return;
+    }
+    spinning[key] = true;
+  }
 
   if (step < totalSteps) {
     el.textContent = pickRandom(options);
     el.style.color = DEFAULT_COLOR;
     el.classList.remove("landed");
-    setTimeout(() => animateSpin(options, el, key, totalSteps, colorMap, onDone, step + 1), SPIN_DELAY_MS);
+    setTimeout(() => animateSpin(options, el, key, totalSteps, colorResolver, onDone, step + 1), SPIN_DELAY_MS);
   } else {
     const result = pickRandom(options);
     el.textContent = result;
-    el.style.color = colorMap[result] || DEFAULT_COLOR;
+    el.style.color = colorResolver(result);
     el.classList.add("landed");
     spinning[key] = false;
     onDone(result);
@@ -275,34 +319,57 @@ function animateSpin(options, el, key, totalSteps, colorMap, onDone, step = 0) {
 }
 
 function tickLoop() {
-  if (spinning.class || spinning.subclass) {
+  if (spinning.class || spinning.subclass || spinning.exotic) {
     playTick();
     tickTimer = setTimeout(tickLoop, SPIN_DELAY_MS);
   }
 }
 
-function onSubclassLanded(result) {
-  buildSubclassEl.textContent = result;
-  buildSubclassEl.style.color = SUBCLASS_COLORS[result] || DEFAULT_COLOR;
-  spinButton.disabled = false;
-  playDoneDing();
-}
+let lastClassResult = null;
 
 function onClassLanded(result) {
+  lastClassResult = result;
   buildClassEl.textContent = result;
   buildClassEl.style.color = CLASS_COLORS[result] || DEFAULT_COLOR;
 }
 
+function onSubclassLanded(result) {
+  buildSubclassEl.textContent = result;
+  buildSubclassEl.style.color = SUBCLASS_COLORS[result] || DEFAULT_COLOR;
+
+  // Once class + subclass are both known, spin the exotic wheel using
+  // the matching pool (subclass list + that class's Neutral list).
+  // No need to restart tickLoop here - it's already running from spinAll()
+  // and keeps going as long as any wheel (including this one) is spinning.
+  const pool = getExoticPool(lastClassResult, result);
+  animateSpin(pool, exoticResultEl, "exotic", SPIN_STEPS, () => EXOTIC_COLOR, onExoticLanded);
+}
+
+function onExoticLanded(result) {
+  if (result) {
+    buildExoticEl.textContent = result;
+    buildExoticEl.style.color = EXOTIC_COLOR;
+  } else {
+    buildExoticEl.textContent = "-";
+    buildExoticEl.style.color = DEFAULT_COLOR;
+  }
+  spinButton.disabled = false;
+  playDoneDing();
+}
+
 function spinAll() {
-  if (spinning.class || spinning.subclass) return;
+  if (spinning.class || spinning.subclass || spinning.exotic) return;
 
   // Unlock audio on first user interaction (required by some browsers)
   getAudioCtx();
 
   spinButton.disabled = true;
+  exoticResultEl.textContent = "-";
+  exoticResultEl.style.color = DEFAULT_COLOR;
+  exoticResultEl.classList.remove("landed");
 
-  animateSpin(CLASSES, classResultEl, "class", SPIN_STEPS, CLASS_COLORS, onClassLanded);
-  animateSpin(SUBCLASSES, subclassResultEl, "subclass", SPIN_STEPS + SUBCLASS_EXTRA_STEPS, SUBCLASS_COLORS, onSubclassLanded);
+  animateSpin(CLASSES, classResultEl, "class", SPIN_STEPS, (r) => CLASS_COLORS[r] || DEFAULT_COLOR, onClassLanded);
+  animateSpin(SUBCLASSES, subclassResultEl, "subclass", SPIN_STEPS + SUBCLASS_EXTRA_STEPS, (r) => SUBCLASS_COLORS[r] || DEFAULT_COLOR, onSubclassLanded);
   tickLoop();
 }
 
