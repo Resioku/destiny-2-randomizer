@@ -120,9 +120,9 @@ const EXOTICS = {
       "Balance of Power",
     ],
     Stasis: [
-      "Mask of Fealty [PVP]",
-      "Mask of Bakris [PVP]",
-      "Renewal Grasps [PVP]",
+      "Mask of Fealty",
+      "Mask of Bakris",
+      "Renewal Grasps",
     ],
     Neutral: [
       "Knucklehead Radar",
