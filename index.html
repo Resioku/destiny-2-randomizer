@@ -19,8 +19,32 @@
     display: flex;
     justify-content: center;
     align-items: flex-start;
+    gap: 24px;
     min-height: 100vh;
-    padding: 30px 0;
+    padding: 30px 20px;
+  }
+
+  #notesPanel {
+    width: 260px;
+    max-height: 620px;
+    background: #c5c9d4;
+    border: 2px solid var(--border);
+    border-radius: 6px;
+    box-sizing: border-box;
+    padding: 12px 16px;
+    overflow-y: auto;
+    flex-shrink: 0;
+  }
+
+  #notesPanel .box-label {
+    margin-bottom: 8px;
+  }
+
+  #notesContent {
+    white-space: pre-wrap;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--text);
   }
 
   .app {
@@ -158,6 +182,11 @@
 </head>
 <body>
 
+<div id="notesPanel">
+  <div class="box-label">Notes</div>
+  <div id="notesContent"></div>
+</div>
+
 <div class="app">
   <div id="title"></div>
 
@@ -215,8 +244,8 @@
         <div class="filter-group-label">Exotic Pool</div>
         <div class="toggle-row">
           <label class="toggle-item"><input type="checkbox" id="toggle-neutral" checked> Include Neutral</label>
-          <label class="toggle-item"><input type="checkbox" id="toggle-pvp" checked> Include PvP-only [WIP]</label>
-          <label class="toggle-item"><input type="checkbox" id="toggle-pve" checked> Include PvE-only [WIP]</label>
+          <label class="toggle-item"><input type="checkbox" id="toggle-pvp" checked> Include PvP-only</label>
+          <label class="toggle-item"><input type="checkbox" id="toggle-pve" checked> Include PvE-only</label>
         </div>
       </div>
 
@@ -225,6 +254,7 @@
 </div>
 
 <script src="exotics.js"></script>
+<script src="notes.js"></script>
 <script>
 // ---------------------------------------------------------
 // MODULAR OPTIONS - edit these lists to change what's on the wheel
@@ -314,25 +344,35 @@ function animateTitle() {
 animateTitle();
 
 // ---------------------------------------------------------
+// NOTES PANEL - just displays whatever is written in notes.js
+// ---------------------------------------------------------
+document.getElementById("notesContent").textContent = typeof NOTES_TEXT !== "undefined" ? NOTES_TEXT : "";
+
+// ---------------------------------------------------------
 // FILTER CHECKBOXES - built dynamically so they always match
 // whatever is in CLASSES / SUBCLASSES above
 // ---------------------------------------------------------
-function buildToggleRow(containerId, names, prefix) {
+function buildToggleRow(containerId, names, prefix, options = {}) {
+  const { defaultUnchecked = [], suffixes = {} } = options;
   const container = document.getElementById(containerId);
   names.forEach(name => {
     const label = document.createElement("label");
     label.className = "toggle-item";
     const checkbox = document.createElement("input");
     checkbox.type = "checkbox";
-    checkbox.checked = true;
+    checkbox.checked = !defaultUnchecked.includes(name);
     checkbox.id = `${prefix}-${name}`;
+    const suffix = suffixes[name] ? " " + suffixes[name] : "";
     label.appendChild(checkbox);
-    label.appendChild(document.createTextNode(" " + name));
+    label.appendChild(document.createTextNode(" " + name + suffix));
     container.appendChild(label);
   });
 }
 buildToggleRow("classToggles", CLASSES, "classToggle");
-buildToggleRow("subclassToggles", SUBCLASSES, "subclassToggle");
+buildToggleRow("subclassToggles", SUBCLASSES, "subclassToggle", {
+  defaultUnchecked: ["Prismatic"],
+  suffixes: { "Prismatic": "[WIP]" },
+});
 
 function getEnabledNames(names, prefix) {
   return names.filter(name => document.getElementById(`${prefix}-${name}`).checked);
@@ -446,14 +486,20 @@ function pickWeighted(entries) {
 
 // Builds the exotic entry list for a given class + subclass result,
 // applying the Neutral weight and the PvP/PvE filter checkboxes.
-// Prismatic gets its own dedicated list (not combined with Neutral).
+// Prismatic combines its own dedicated list with the class's Neutral
+// list (same as every other subclass) - it's not a hard isolation,
+// Prismatic just also has its own unique class-item options on top.
 function buildExoticEntries(className, subclassName) {
   const classData = EXOTICS[className];
   if (!classData) return [];
 
   let entries;
   if (subclassName === "Prismatic") {
-    entries = toEntries(classData.Prismatic || [], 1);
+    const prismaticEntries = toEntries(classData.Prismatic || [], 1);
+    const neutralEntries = document.getElementById("toggle-neutral").checked
+      ? toEntries(classData.Neutral || [], NEUTRAL_WEIGHT)
+      : [];
+    entries = prismaticEntries.concat(neutralEntries);
   } else {
     const subclassEntries = toEntries(classData[subclassName] || [], 1);
     const neutralEntries = document.getElementById("toggle-neutral").checked
