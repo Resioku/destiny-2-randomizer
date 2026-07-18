@@ -3,9 +3,6 @@
 // the backticks ( ` ) below. Don't touch anything outside them.
 
 const NOTES_TEXT = `
-Dev Notes
-
 - Prismatic is marked [WIP] and off by default in Filters. It technically can use a lot of non-Prismatic exotics, but
   that list isn't built out yet.
-
 `;
