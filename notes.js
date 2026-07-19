@@ -13,6 +13,7 @@ const NOTES_TEXT = `
 // whichever you prefer) as things change.
 const PATCH_NOTES_TEXT = `
 **7/18/2026**
+- Added an Icon and Background
 - Added Filter Saving
 - Added Notes
 - Allowed Prismatic to pull from the Neutral exotics, still haven't added every exotic it synergizes with however
