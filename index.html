@@ -101,26 +101,6 @@
     font-weight: 700;
   }
 
-  /* Desktop default: Notes/Patch Notes always fully expanded, no toggle
-     interaction - matches the original always-visible behavior exactly.
-     The mobile media query below overrides this to restore native
-     collapsible <details> behavior on small screens. */
-  .mobile-collapsible summary {
-    pointer-events: none;
-  }
-
-  .mobile-collapsible summary::-webkit-details-marker {
-    display: none;
-  }
-
-  .mobile-collapsible summary::marker {
-    display: none;
-  }
-
-  .mobile-collapsible .side-panel-content {
-    display: block !important;
-  }
-
   #statsDisplay {
     position: fixed;
     left: 20px;
@@ -283,45 +263,23 @@
       order: 1;
     }
 
+    #statsDisplay {
+      position: static;
+      order: 2;
+      text-align: center;
+      margin-top: 4px;
+    }
+
     #sidebar {
       position: static;
       width: 100%;
       max-width: 380px;
-      order: 2;
+      order: 3;
+      margin-top: 16px;
     }
 
     .side-panel {
       max-height: 180px;
-    }
-
-    /* Restore real collapsible behavior for Notes/Patch Notes on mobile -
-       collapsed by default, tap the header to expand either one. */
-    .mobile-collapsible summary {
-      pointer-events: auto;
-      cursor: pointer;
-    }
-
-    .mobile-collapsible summary::before {
-      content: "▸ ";
-    }
-
-    .mobile-collapsible[open] summary::before {
-      content: "▾ ";
-    }
-
-    .mobile-collapsible .side-panel-content {
-      display: revert;
-    }
-
-    .mobile-collapsible:not([open]) {
-      max-height: none;
-    }
-
-    #statsDisplay {
-      position: static;
-      order: 3;
-      text-align: center;
-      margin-top: 4px;
     }
   }
 </style>
@@ -339,14 +297,14 @@
 </div>
 
 <div id="sidebar">
-  <details class="side-panel mobile-collapsible" id="notesPanel">
-    <summary class="box-label">Notes</summary>
+  <div class="side-panel" id="notesPanel">
+    <div class="box-label">Notes</div>
     <div id="notesContent" class="side-panel-content"></div>
-  </details>
-  <details class="side-panel mobile-collapsible" id="patchNotesPanel">
-    <summary class="box-label">Patch Notes</summary>
+  </div>
+  <div class="side-panel" id="patchNotesPanel">
+    <div class="box-label">Patch Notes</div>
     <div id="patchNotesContent" class="side-panel-content"></div>
-  </details>
+  </div>
 </div>
 
 <div class="app">
