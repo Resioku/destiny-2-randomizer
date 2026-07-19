@@ -305,6 +305,7 @@
 
 <script src="exotics.js"></script>
 <script src="notes.js"></script>
+<script src="config.js"></script>
 <script>
 // ---------------------------------------------------------
 // MODULAR OPTIONS - edit these lists to change what's on the wheel
@@ -532,15 +533,34 @@ function updateTotalSpinsDisplay() {
 updateTotalSpinsDisplay();
 
 // Uses countapi.mileshilliard.com - a free, no-signup counter API.
-// Wrapped in try/catch everywhere: if this service is ever down, the
-// Global Spins number just stops updating instead of breaking anything.
+// Wrapped in try/catch: if this service is ever down, Global Spins
+// just shows "unavailable" instead of breaking anything else.
+//
+// Everything here respects CONFIG.globalSpins from config.js - set
+// enabled: false there to hide this entirely, or forceUnavailable:
+// true to keep it visible but skip contacting the service at all.
+//
+// Worth knowing: since this is a public, keyless counter with no
+// server of our own in front of it, there's no way to fully prevent
+// someone determined from inflating it directly (e.g. hitting the
+// API URL themselves, bypassing this page entirely). That would take
+// a real backend to actually stop.
 const GLOBAL_COUNTER_BASE = "https://countapi.mileshilliard.com/api/v1";
 const GLOBAL_SPIN_KEY = "driftsend-d2-spinwheel-global-spins-v1";
 
+function isGlobalSpinsEnabled() {
+  return !!(CONFIG && CONFIG.globalSpins && CONFIG.globalSpins.enabled);
+}
+
+function isGlobalSpinsForcedUnavailable() {
+  return !!(CONFIG && CONFIG.globalSpins && CONFIG.globalSpins.forceUnavailable);
+}
+
 async function fetchGlobalSpins() {
+  if (!isGlobalSpinsEnabled() || isGlobalSpinsForcedUnavailable()) return null;
   try {
     const res = await fetch(`${GLOBAL_COUNTER_BASE}/get/${GLOBAL_SPIN_KEY}`);
-    if (!res.ok) return null;
+    if (!res.ok) throw new Error("bad response");
     const data = await res.json();
     return data.value;
   } catch (e) {
@@ -549,9 +569,10 @@ async function fetchGlobalSpins() {
 }
 
 async function hitGlobalSpins() {
+  if (!isGlobalSpinsEnabled() || isGlobalSpinsForcedUnavailable()) return null;
   try {
     const res = await fetch(`${GLOBAL_COUNTER_BASE}/hit/${GLOBAL_SPIN_KEY}`);
-    if (!res.ok) return null;
+    if (!res.ok) throw new Error("bad response");
     const data = await res.json();
     return data.value;
   } catch (e) {
@@ -560,12 +581,18 @@ async function hitGlobalSpins() {
 }
 
 function updateGlobalSpinsDisplay(value) {
-  globalSpinsEl.textContent = value !== null ? `Global Spins: ${value}` : "Global Spins: unavailable";
+  globalSpinsEl.textContent = value !== null && typeof value !== "undefined"
+    ? `Global Spins: ${value}`
+    : "Global Spins: unavailable";
 }
 
-// Read-only on page load - just displays the current count, doesn't
-// increment it (a page visit isn't a spin).
-fetchGlobalSpins().then(updateGlobalSpinsDisplay);
+if (!isGlobalSpinsEnabled()) {
+  globalSpinsEl.style.display = "none";
+} else {
+  // Read-only on page load - just displays the current count, doesn't
+  // increment it (a page visit isn't a spin).
+  fetchGlobalSpins().then(updateGlobalSpinsDisplay);
+}
 
 // One listener on the container catches every checkbox inside it,
 // including ones added dynamically above - no per-checkbox wiring needed.
