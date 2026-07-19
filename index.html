@@ -29,13 +29,35 @@
     justify-content: center;
     align-items: flex-start;
     min-height: 100vh;
-    padding: 30px 20px;
+    padding: 86px 20px 30px 20px;
+  }
+
+  #topBar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 56px;
+    background: #232f52;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 16px;
+    box-sizing: border-box;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+    z-index: 100;
+  }
+
+  #topBar img {
+    height: 36px;
+    width: 36px;
+    object-fit: contain;
   }
 
   #sidebar {
     position: fixed;
     left: 20px;
-    top: 30px;
+    top: 86px;
     display: flex;
     flex-direction: column;
     gap: 16px;
@@ -94,11 +116,10 @@
     gap: 16px;
   }
 
-  #title {
-    font-size: 20px;
+  #topBar #title {
+    font-size: 18px;
     font-weight: bold;
     letter-spacing: 1px;
-    text-align: center;
   }
 
   #title span {
@@ -221,6 +242,11 @@
 </head>
 <body>
 
+<div id="topBar">
+  <img src="favicon-48.png" alt="Icon">
+  <div id="title"></div>
+</div>
+
 <div id="statsDisplay">
   <div id="totalSpinsText">Total Spins: -</div>
   <div id="globalSpinsText">Global Spins: -</div>
@@ -238,7 +264,6 @@
 </div>
 
 <div class="app">
-  <div id="title"></div>
 
   <div class="box">
     <div class="box-label">Class</div>
@@ -355,7 +380,7 @@ const RAINBOW_FRAME_MS = 60;
 // ---------------------------------------------------------
 // TITLE - build letter spans and animate rainbow colors
 // ---------------------------------------------------------
-const titleText = "DESTINY 2 - SPIN THE WHEEL";
+const titleText = "D2Randomizer";
 const titleEl = document.getElementById("title");
 const letterEls = [...titleText].map(ch => {
   const span = document.createElement("span");
