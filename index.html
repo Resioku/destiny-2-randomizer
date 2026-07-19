@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Destiny 2 - Spin the Wheel</title>
 <link rel="icon" type="image/x-icon" href="favicon.ico">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
@@ -98,6 +99,26 @@
 
   .side-panel-content strong {
     font-weight: 700;
+  }
+
+  /* Desktop default: Notes/Patch Notes always fully expanded, no toggle
+     interaction - matches the original always-visible behavior exactly.
+     The mobile media query below overrides this to restore native
+     collapsible <details> behavior on small screens. */
+  .mobile-collapsible summary {
+    pointer-events: none;
+  }
+
+  .mobile-collapsible summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .mobile-collapsible summary::marker {
+    display: none;
+  }
+
+  .mobile-collapsible .side-panel-content {
+    display: block !important;
   }
 
   #statsDisplay {
@@ -240,6 +261,69 @@
     gap: 4px;
     font-size: 13px;
   }
+  /* ---------------------------------------------------------
+     MOBILE LAYOUT
+     Below this width there isn't room for the sidebar to sit
+     beside the main column, so everything stacks vertically
+     instead and the page scrolls normally (unlike desktop,
+     which is intentionally locked to one screen height).
+     --------------------------------------------------------- */
+  @media (max-width: 800px) {
+    body {
+      height: auto;
+      min-height: 100vh;
+      overflow: auto;
+      flex-direction: column;
+      padding: 76px 16px 24px 16px;
+    }
+
+    .app {
+      width: 100%;
+      max-width: 380px;
+      order: 1;
+    }
+
+    #sidebar {
+      position: static;
+      width: 100%;
+      max-width: 380px;
+      order: 2;
+    }
+
+    .side-panel {
+      max-height: 180px;
+    }
+
+    /* Restore real collapsible behavior for Notes/Patch Notes on mobile -
+       collapsed by default, tap the header to expand either one. */
+    .mobile-collapsible summary {
+      pointer-events: auto;
+      cursor: pointer;
+    }
+
+    .mobile-collapsible summary::before {
+      content: "▸ ";
+    }
+
+    .mobile-collapsible[open] summary::before {
+      content: "▾ ";
+    }
+
+    .mobile-collapsible .side-panel-content {
+      display: revert;
+    }
+
+    .mobile-collapsible:not([open]) {
+      max-height: none;
+    }
+
+    #statsDisplay {
+      position: static;
+      order: 3;
+      text-align: center;
+      margin-top: 4px;
+    }
+  }
 </style>
 </head>
 <body>
@@ -255,14 +339,14 @@
 </div>
 
 <div id="sidebar">
-  <div class="side-panel" id="notesPanel">
-    <div class="box-label">Notes</div>
+  <details class="side-panel mobile-collapsible" id="notesPanel">
+    <summary class="box-label">Notes</summary>
     <div id="notesContent" class="side-panel-content"></div>
-  </div>
-  <div class="side-panel" id="patchNotesPanel">
-    <div class="box-label">Patch Notes</div>
+  </details>
+  <details class="side-panel mobile-collapsible" id="patchNotesPanel">
+    <summary class="box-label">Patch Notes</summary>
     <div id="patchNotesContent" class="side-panel-content"></div>
-  </div>
+  </details>
 </div>
 
 <div class="app">
