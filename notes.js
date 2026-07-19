@@ -14,7 +14,7 @@ const NOTES_TEXT = `
 const PATCH_NOTES_TEXT = `
 **7/18/2026**
 - Added an Icon and Background
-- Added Filter Saving
+- Added Filter Saving, this makes it so filters will save on and off states between uses if you refresh or open/close the tab
 - Added Notes
 - Allowed Prismatic to pull from the Neutral exotics, still haven't added every exotic it synergizes with however
 - Added Filters
