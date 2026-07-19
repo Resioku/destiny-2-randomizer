@@ -29,4 +29,4 @@ These notes are ordered by MM/DD/YYYY
 
 **7/17/2026**
 - Creation
-`; 
+`;
