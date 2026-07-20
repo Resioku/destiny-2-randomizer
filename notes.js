@@ -14,6 +14,10 @@ const NOTES_TEXT = `
 const PATCH_NOTES_TEXT = `
 These notes are ordered by MM/DD/YYYY
 
+**7/20/2026**
+-Added PvP tags to some exotics, let me know if you have more you want added, or removed
+-Removed the PvE filter option for now
+
 **7/19/2026**
 - Added better mobile support
 - Customization and renamed the site to "Destiny 2 Randomizer, the name fits better since I scrapped the wheel idea
