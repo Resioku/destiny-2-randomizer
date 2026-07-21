@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Bungie API Test</title>
+</head>
+<body style="font-family: monospace; padding: 20px; background: #111; color: #0f0;">
+
+<h2 style="color: white;">Testing GetPublicVendors (no login, just the API key)...</h2>
+<div id="output" style="white-space: pre-wrap; word-break: break-word;">Loading...</div>
+
+<script>
+// This is a THROWAWAY TEST FILE - not part of the real site.
+// It just checks whether Xur's data is reachable using only the API
+// key (no OAuth login), which would mean the whole Xur feature can
+// skip the backend/Workers setup entirely.
+
+const API_KEY = "211c7360baf14cee9225fa34aef06461";
+
+async function testPublicVendors() {
+  const output = document.getElementById("output");
+  try {
+    const res = await fetch("https://www.bungie.net/Platform/Destiny2/Vendors/?components=400,401,402", {
+      headers: { "X-API-Key": API_KEY }
+    });
+
+    output.textContent = `HTTP status: ${res.status}\n\n`;
+
+    const data = await res.json();
+    output.textContent += JSON.stringify(data, null, 2);
+  } catch (err) {
+    output.textContent += "FETCH ERROR: " + err.message;
+  }
+}
+
+testPublicVendors();
+</script>
+
+</body>
+</html>
