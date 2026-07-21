@@ -1,4 +1,4 @@
-<!DOCTYPE html> 
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -32,7 +32,7 @@
     height: 100vh;
     overflow: hidden;
     box-sizing: border-box;
-    padding: 86px 20px 30px 20px;
+    padding: 126px 20px 30px 20px;
   }
 
   #topBar {
@@ -57,10 +57,104 @@
     object-fit: contain;
   }
 
+  #tabBar {
+    position: fixed;
+    top: 56px;
+    left: 0;
+    width: 100%;
+    height: 40px;
+    background: #1c2645;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    padding: 0 20px;
+    box-sizing: border-box;
+    z-index: 99;
+  }
+
+  .tab-button {
+    background: none;
+    border: none;
+    color: #dbe1f0;
+    font-size: 14px;
+    font-weight: bold;
+    font-family: inherit;
+    cursor: pointer;
+    padding: 8px 2px;
+    border-bottom: 2px solid transparent;
+  }
+
+  .tab-button:hover {
+    color: #a8863f;
+  }
+
+  .tab-button.active {
+    color: var(--button-bg);
+    border-bottom: 2px solid var(--button-bg);
+  }
+
+  #xurStatus {
+    font-size: 16px;
+    font-weight: bold;
+    text-align: center;
+    margin-bottom: 10px;
+  }
+
+  #xurInventoryList {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .xur-item {
+    background: #f0f2f8;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 8px 10px;
+    cursor: default;
+  }
+
+  .xur-item-name {
+    font-weight: bold;
+    font-size: 14px;
+  }
+
+  .xur-item-type {
+    font-size: 12px;
+    color: #444;
+  }
+
+  #xurEmptyMessage {
+    text-align: center;
+    color: #444;
+    font-size: 14px;
+    padding: 10px 0;
+  }
+
+  #statTooltip {
+    position: fixed;
+    display: none;
+    background: #1c2645;
+    color: #ffffff;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 8px 10px;
+    font-size: 12px;
+    line-height: 1.5;
+    max-width: 220px;
+    pointer-events: none;
+    z-index: 200;
+  }
+
+  #statTooltip .tooltip-title {
+    font-weight: bold;
+    margin-bottom: 4px;
+  }
+
   #sidebar {
     position: fixed;
     left: 20px;
-    top: 86px;
+    top: 126px;
     display: flex;
     flex-direction: column;
     gap: 16px;
@@ -254,7 +348,7 @@
       min-height: 100vh;
       overflow: auto;
       flex-direction: column;
-      padding: 76px 16px 24px 16px;
+      padding: 116px 16px 24px 16px;
     }
 
     .app {
@@ -291,6 +385,11 @@
   <div id="title"></div>
 </div>
 
+<div id="tabBar">
+  <button class="tab-button active" id="tabButtonRandomizer">Randomizer</button>
+  <button class="tab-button" id="tabButtonWeeklies">Weeklies</button>
+</div>
+
 <div id="statsDisplay">
   <div id="totalSpinsText">Total Spins: -</div>
   <div id="globalSpinsText">Global Spins: -</div>
@@ -307,7 +406,7 @@
   </div>
 </div>
 
-<div class="app">
+<div class="app" id="randomizerPage">
 
   <div class="box">
     <div class="box-label">Class</div>
@@ -371,8 +470,20 @@
   </details>
 </div>
 
+<div class="app" id="weekliesPage" style="display: none;">
+  <div class="box" id="xurBox">
+    <div class="box-label">Xûr, Agent of the Nine</div>
+    <div id="xurStatus">-</div>
+    <div id="xurInventoryList"></div>
+    <div id="xurEmptyMessage" style="display: none;"></div>
+  </div>
+</div>
+
+<div id="statTooltip"></div>
+
 <script src="exotics.js"></script>
 <script src="notes.js"></script>
+<script src="xur-data.js"></script>
 <script src="config.js"></script>
 <script>
 // ---------------------------------------------------------
@@ -461,6 +572,153 @@ function animateTitle() {
   setTimeout(animateTitle, RAINBOW_FRAME_MS);
 }
 animateTitle();
+
+// ---------------------------------------------------------
+// TABS - simple show/hide, no page reload
+// ---------------------------------------------------------
+const randomizerPageEl = document.getElementById("randomizerPage");
+const weekliesPageEl = document.getElementById("weekliesPage");
+const tabButtonRandomizer = document.getElementById("tabButtonRandomizer");
+const tabButtonWeeklies = document.getElementById("tabButtonWeeklies");
+
+function showTab(tab) {
+  const showRandomizer = tab === "randomizer";
+  randomizerPageEl.style.display = showRandomizer ? "" : "none";
+  weekliesPageEl.style.display = showRandomizer ? "none" : "";
+  tabButtonRandomizer.classList.toggle("active", showRandomizer);
+  tabButtonWeeklies.classList.toggle("active", !showRandomizer);
+}
+tabButtonRandomizer.addEventListener("click", () => showTab("randomizer"));
+tabButtonWeeklies.addEventListener("click", () => showTab("weeklies"));
+
+// ---------------------------------------------------------
+// XUR TRACKER
+// ---------------------------------------------------------
+// Xur's schedule is fixed and public - no API needed for this part:
+// he arrives at the Friday daily reset and leaves at the following
+// Tuesday weekly reset. Destiny 2's reset has always landed at
+// 17:00 UTC (10am PT / 1pm ET). This is pure date math, so the
+// countdown works correctly regardless of the visitor's own timezone.
+const XUR_RESET_HOUR_UTC = 17;
+const XUR_ARRIVE_DAY_UTC = 5; // Friday (0 = Sunday)
+const XUR_DEPART_DAY_UTC = 2; // Tuesday
+
+function getNextUTCOccurrence(targetDayOfWeek, hourUTC) {
+  const now = new Date();
+  const result = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), hourUTC, 0, 0, 0));
+  let dayDiff = (targetDayOfWeek - result.getUTCDay() + 7) % 7;
+  result.setUTCDate(result.getUTCDate() + dayDiff);
+  if (result <= now) {
+    result.setUTCDate(result.getUTCDate() + 7);
+  }
+  return result;
+}
+
+function formatCountdown(msRemaining) {
+  const totalMinutes = Math.max(0, Math.floor(msRemaining / 60000));
+  const days = Math.floor(totalMinutes / 1440);
+  const hours = Math.floor((totalMinutes % 1440) / 60);
+  const minutes = totalMinutes % 60;
+  const parts = [];
+  if (days > 0) parts.push(`${days}d`);
+  if (days > 0 || hours > 0) parts.push(`${hours}h`);
+  parts.push(`${minutes}m`);
+  return parts.join(" ");
+}
+
+function updateXurStatus() {
+  const xurStatusEl = document.getElementById("xurStatus");
+  const nextArrival = getNextUTCOccurrence(XUR_ARRIVE_DAY_UTC, XUR_RESET_HOUR_UTC);
+  const nextDeparture = getNextUTCOccurrence(XUR_DEPART_DAY_UTC, XUR_RESET_HOUR_UTC);
+  const now = new Date();
+
+  // Whichever named reset comes sooner tells us the current state:
+  // if the next Tuesday departure is closer than the next Friday
+  // arrival, Xur must already be here (we're inside his visit window).
+  const isHere = nextDeparture < nextArrival;
+
+  if (isHere) {
+    xurStatusEl.textContent = `Xûr is here! Leaves in ${formatCountdown(nextDeparture - now)}`;
+  } else {
+    xurStatusEl.textContent = `Xûr is away. Arrives in ${formatCountdown(nextArrival - now)}`;
+  }
+
+  return isHere;
+}
+
+function renderXurInventory(isHere) {
+  const listEl = document.getElementById("xurInventoryList");
+  const emptyEl = document.getElementById("xurEmptyMessage");
+  listEl.innerHTML = "";
+
+  if (!isHere) {
+    emptyEl.style.display = "block";
+    emptyEl.textContent = "Check back once Xûr arrives.";
+    return;
+  }
+
+  const inventory = (typeof XUR_INVENTORY !== "undefined") ? XUR_INVENTORY : [];
+  if (inventory.length === 0) {
+    emptyEl.style.display = "block";
+    emptyEl.textContent = "Xûr's inventory hasn't been added yet this week.";
+    return;
+  }
+
+  emptyEl.style.display = "none";
+  inventory.forEach(item => {
+    const itemEl = document.createElement("div");
+    itemEl.className = "xur-item";
+
+    const nameEl = document.createElement("div");
+    nameEl.className = "xur-item-name";
+    nameEl.textContent = item.name + (item.forClass ? ` (${item.forClass})` : "");
+    itemEl.appendChild(nameEl);
+
+    const typeEl = document.createElement("div");
+    typeEl.className = "xur-item-type";
+    typeEl.textContent = item.type || "";
+    itemEl.appendChild(typeEl);
+
+    if (item.stats && item.stats.length > 0) {
+      itemEl.addEventListener("mousemove", (e) => showStatTooltip(e, item));
+      itemEl.addEventListener("mouseleave", hideStatTooltip);
+    }
+
+    listEl.appendChild(itemEl);
+  });
+}
+
+function showStatTooltip(e, item) {
+  const tooltip = document.getElementById("statTooltip");
+  let html = `<div class="tooltip-title">${item.name}</div>`;
+  item.stats.forEach(stat => {
+    html += `${stat.label}: ${stat.value}<br>`;
+  });
+  if (item.perk) {
+    html += `<br>${item.perk}`;
+  }
+  tooltip.innerHTML = html;
+  tooltip.style.display = "block";
+  tooltip.style.left = (e.clientX + 14) + "px";
+  tooltip.style.top = (e.clientY + 14) + "px";
+}
+
+function hideStatTooltip() {
+  document.getElementById("statTooltip").style.display = "none";
+}
+
+function refreshXurTracker() {
+  const xurBoxEl = document.getElementById("xurBox");
+  if (!CONFIG || !CONFIG.weeklies || !CONFIG.weeklies.xurEnabled) {
+    xurBoxEl.innerHTML = '<div class="box-label">Xûr, Agent of the Nine</div><div id="xurStatus">Xûr tracking is temporarily disabled.</div>';
+    return;
+  }
+  const isHere = updateXurStatus();
+  renderXurInventory(isHere);
+}
+
+refreshXurTracker();
+setInterval(refreshXurTracker, 60000); // refresh every minute
 
 // ---------------------------------------------------------
 // NOTES / PATCH NOTES PANELS - just display whatever is written in notes.js
