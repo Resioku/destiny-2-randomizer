@@ -1,4 +1,4 @@
-// Write whatever you want here - it shows up in the Notes panel on the
+// Write whatever you want here - it shows up in the Notes panel on the 
 // page exactly as typed, including line breaks. Keep everything between
 // the backticks ( ` ) below. Don't touch anything outside them.
 
